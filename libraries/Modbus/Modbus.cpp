@@ -1,6 +1,6 @@
 /*
     Modbus.cpp - Source for Modbus Base Library
-    Copyright (C) 2014 André Sarmento Barbosa
+    Copyright (C) 2014 AndrŽ Sarmento Barbosa
 */
 #include "Modbus.h"
 
@@ -261,6 +261,15 @@ void Modbus::writeMultipleRegisters(byte* frame,word startreg, word numoutputs, 
         }
     }
 
+    int nbOutputs = numoutputs;
+	word val;
+    word i = 0;
+	while(numoutputs--) {
+        val = (word)frame[6+i*2] << 8 | (word)frame[7+i*2];
+        this->Hreg(startreg + i, val);
+        i++;
+	}
+
     //Clean frame buffer
     free(_frame);
 	_len = 5;
@@ -269,22 +278,13 @@ void Modbus::writeMultipleRegisters(byte* frame,word startreg, word numoutputs, 
         this->exceptionResponse(MB_FC_WRITE_REGS, MB_EX_SLAVE_FAILURE);
         return;
     }
-
-    _frame[0] = MB_FC_WRITE_REGS;
-    _frame[1] = startreg >> 8;
-    _frame[2] = startreg & 0x00FF;
-    _frame[3] = numoutputs >> 8;
-    _frame[4] = numoutputs & 0x00FF;
-
-    word val;
-    word i = 0;
-	while(numoutputs--) {
-        val = (word)frame[6+i*2] << 8 | (word)frame[7+i*2];
-        this->Hreg(startreg + i, val);
-        i++;
-	}
-
-    _reply = MB_REPLY_NORMAL;
+	
+	_frame[0] = MB_FC_WRITE_REGS;
+	_frame[1] = startreg >> 8;
+	_frame[2] = startreg & 0x00FF;
+	_frame[3] = numoutputs >> 8;
+	_frame[4] = numoutputs & 0x00FF;
+	_reply = MB_REPLY_NORMAL;
 }
 
 #ifndef USE_HOLDING_REGISTERS_ONLY
@@ -326,7 +326,7 @@ void Modbus::readCoils(word startreg, word numregs) {
     byte bitn = 0;
     word totregs = numregs;
     word i;
-	while (numregs--) {
+	while (numregs) {
         i = (totregs - numregs) / 8;
 		if (this->Coil(startreg))
 			bitSet(_frame[2+i], bitn);
@@ -337,6 +337,7 @@ void Modbus::readCoils(word startreg, word numregs) {
 		if (bitn == 8) bitn = 0;
 		//increment the register
 		startreg++;
+		numregs--;
 	}
 
     _reply = MB_REPLY_NORMAL;
@@ -377,7 +378,7 @@ void Modbus::readInputStatus(word startreg, word numregs) {
     byte bitn = 0;
     word totregs = numregs;
     word i;
-	while (numregs--) {
+	while (numregs) {
         i = (totregs - numregs) / 8;
 		if (this->Ists(startreg))
 			bitSet(_frame[2+i], bitn);
@@ -388,6 +389,7 @@ void Modbus::readInputStatus(word startreg, word numregs) {
 		if (bitn == 8) bitn = 0;
 		//increment the register
 		startreg++;
+		numregs--;
 	}
 
     _reply = MB_REPLY_NORMAL;
@@ -496,7 +498,7 @@ void Modbus::writeMultipleCoils(byte* frame,word startreg, word numoutputs, byte
     byte bitn = 0;
     word totoutputs = numoutputs;
     word i;
-	while (numoutputs--) {
+	while (numoutputs) {
         i = (totoutputs - numoutputs) / 8;
         this->Coil(startreg, bitRead(frame[6+i], bitn));
         //increment the bit index
@@ -504,6 +506,7 @@ void Modbus::writeMultipleCoils(byte* frame,word startreg, word numoutputs, byte
         if (bitn == 8) bitn = 0;
         //increment the register
         startreg++;
+		numoutputs--;
 	}
 
     _reply = MB_REPLY_NORMAL;
